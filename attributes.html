@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+	<style>
+		.button {
+		  display: inline-block;
+		  padding: 15px 25px;
+		  width: 250px;
+		  font-size: 14px;
+		  cursor: pointer;
+		  text-align: center;
+		  text-decoration: none;
+		  outline: none;
+		  color: #fff;
+		  background-color: #0ABEF5;
+		  border: none;
+		  border-radius: 15px;
+		  box-shadow: 0 9px #999;
+		}
+
+		.button:hover {background-color: #7FC1EA}
+
+		.button:active {
+		  background-color: #1F58C9;
+		  box-shadow: 0 5px #666;
+		  transform: translateY(4px);
+	}
+	</style>
+</head>
+<body>
+From here you can:<br/>
+<a href="/refresh?refresh_token={{refresh_token}}"><button class="button">Refresh the token</button></a>
+<a href="/getattr"><button class="button">Run your query using Python</button></a>
+<a href="/getattrjava"><button class="button">Run your query using JDBC</button></a>
+<br/>
+<br/>
+Here are the query results:<br/> 
+<table border="1">
+    % for k, v in items:
+    <tr>
+        <td>{{k}}</td>
+        <td>{{v}}</td>
+    </tr>
+    % end
+</table>
+</body>
+</html>

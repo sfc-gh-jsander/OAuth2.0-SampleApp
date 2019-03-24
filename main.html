@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+	<style>
+		.button {
+		  display: inline-block;
+		  padding: 15px 25px;
+		  width: 250px;
+		  font-size: 14px;
+		  cursor: pointer;
+		  text-align: center;
+		  text-decoration: none;
+		  outline: none;
+		  color: #fff;
+		  background-color: #0ABEF5;
+		  border: none;
+		  border-radius: 15px;
+		  box-shadow: 0 9px #999;
+		}
+
+		.button:hover {background-color: #7FC1EA}
+
+		.button:active {
+		  background-color: #1F58C9;
+		  box-shadow: 0 5px #666;
+		  transform: translateY(4px);
+	}
+	</style>
+</head>
+<body>
+Welcome.<br/>
+This is a very simple application meant to show how OAuth2.0 may be used along with Snowflake. You can log in using your interacive authentication method of choice and then run a small, sample query. Each page you encounter will offer you all the options that make sense for what the applicatiln can do given what it has at that moment.
+<br/>
+<br/>
+From here you can:
+<br/>
+<a href="/logon"><button class="button">Get an Auth Token (log in)</button></a><br/>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+</head>
+<body>
+Something went wrong. In OAuth2.0 communications, a parameter called "state" is passed to the authorization endpoint and then back to the client. For some reason those values do not match. So we arrive here. The value that was passed was:<br/>
+<br/>
+{{state_parameter}}<br/> 
+<br/>
+The value that came back was:<br/>
+<br/>
+{{returned_state_parameter}}<br/>
+<br/>
+<br/>
+The point of this exchange is to prevent CSRF (someone getting the wrong response intentionally or through error). Since we don't know why this happened here and we can't be sure it's not a bad guy, go back to the start and try again...
+</body>
+</html> 
