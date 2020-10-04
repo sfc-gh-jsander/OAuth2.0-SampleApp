@@ -27,16 +27,35 @@
 		  box-shadow: 0 5px #666;
 		  transform: translateY(4px);
 	}
+
+		/* make the table a 100% wide by default */
+		table { table-layout: fixed; width: 100%; }
+		td { word-break:break-all; }
+		span { word-break:break-all; }
 	</style>
 </head>
 <body>
 From here you can:<br/>
-<a href="/refresh?refresh_token={{refresh_token}}"><button class="button">Refresh the token</button></a>
-<a href="/getattr"><button class="button">Run your query using Python</button></a>
-<a href="/getattrjava"><button class="button">Run your query using JDBC</button></a>
+% if not refresh_token == "null":
+<a href="/refresh?refresh_token={{refresh_token}}"><button class="button">Refresh the token (Snowflake OAuth ONLY)</button></a>
+% end
+<a href="/getattr"><button class="button">Run your query using Python (Snowflake or External OAuth)</button></a>
+<a href="/getattrjava"><button class="button">Run your query using JDBC (Snowflake or External OAuth)</button></a>
+<a href="/"><button class="button">Go back to the main app page (Snowflake or External OAuth)</button></a>
 <br/>
 <br/>
 Here are the query results:<br/> 
+<table border="1">
+    % for f1, f2 in results:
+    <tr>
+        <td>{{f1}}</td>
+        <td>{{f2}}</td>
+    </tr>
+    % end
+</table>
+<br/>
+<br/>
+Current state of the token:<br/>
 <table border="1">
     % for k, v in items:
     <tr>

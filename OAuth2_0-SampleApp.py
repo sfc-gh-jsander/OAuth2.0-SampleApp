@@ -32,12 +32,14 @@
 from bottle import Bottle, request, run, redirect, SimpleTemplate, template
 from urllib.parse import urlparse, urlunparse, urlencode, quote
 import urllib.request
+import requests
 import string
 import random
 import base64
 import ssl
 import json
 import subprocess
+from subprocess import STDOUT,PIPE
 import snowflake.connector
 import configparser
 from PKCE import code_verifier, code_challenge
@@ -52,13 +54,35 @@ config = configparser.ConfigParser()
 # change to a full path if you move the file
 config.read('OAuth2_0-SampleApp.ini')
 
+# App settings
+app_port = config['APP']['port']
+
+# Snowflake OAuth settings
 client_id = config['OAUTH']['client_id']
 client_secret = config['OAUTH']['client_secret']
 redirect_uri = config['OAUTH']['redirect_uri']
 authorization_endpoint = config['OAUTH']['authorization_endpoint']
 token_endpoint = config['OAUTH']['token_endpoint']
-
 do_pkce = config['OAUTH']['do_pkce']
+
+# External OAuth settings
+extoauth_scope = config['EXTOAUTH']['extoauth_scope']
+extoauth_oauth_client_id = config['EXTOAUTH']['extoauth_oauth_client_id']
+extoauth_oauth_client_secret = config['EXTOAUTH']['extoauth_oauth_client_secret']
+extoauth_token_endpoint = config['EXTOAUTH']['extoauth_token_endpoint']
+extoauth_jws_key_endpoint = config['EXTOAUTH']['extoauth_jws_key_endpoint']
+extoauth_issuer = config['EXTOAUTH']['extoauth_issuer']
+
+# Java settings
+java_class = config['JAVA']['compiled_classpath']
+java_jdbcjar = config['JAVA']['snowflake_jdbc_classpath']
+
+# Snowflake settings
+snowflake_account = config['SNOWFLAKE']['account']
+snowflake_accounturl = config['SNOWFLAKE']['accounturl']
+snowflake_authenticator = config['SNOWFLAKE']['authenticator']
+snowflake_role = config['SNOWFLAKE']['role']
+snowflake_query = config['SNOWFLAKE']['query']
 
 # if PKCE has been set to TRUE, generate the code verifier and challenge
 # see https://tools.ietf.org/html/rfc7636 for details
@@ -86,9 +110,11 @@ def do_get():
     if code:
         returned_state_parameter = request.query.get('state')
         # UNCOMMENT FOR DEBUGGING # print('DEBUGGING... setting returned_state_parameter to a bad value on purpose')
-        # UNCOMMENT FOR DEBUGGING # returned_state_parameter = 'noway'
+        # UNCOMMENT FOR DEBUGGING # returned_state_parameter = 'noway' # use to test inproper returns
+
         if returned_state_parameter != state_parameter:
             return template('bad.html', returned_state_parameter=returned_state_parameter, state_parameter=state_parameter)
+
         # got code from OAuth 2 authentication server
         token = get_token_code(code)
         state.update(token)
@@ -97,10 +123,10 @@ def do_get():
     else:
         return template('main.html')
 
-# handles the forwarding for authentication
+# handles the forwarding for authentication used for Snowflake OAuth
 @app.get('/logon')
 def do_logon():
-    # UNCOMMENT FOR DEBUGGING # print('ENTERING: do_logon')
+    # UNCOMMENT FOR DEBUGGING # print('ENTERING: do_logon {Snowflake OAuth}')
     pr=list(urlparse(authorization_endpoint))
     # set query
     if do_pkce == "TRUE":
@@ -123,6 +149,37 @@ def do_logon():
     # UNCOMMENT FOR DEBUGGING # print('pr for logon: {}'.format(pr))
     redirect(urlunparse(pr))
 
+# handles the forwarding for authentication used for Snowflake OAuth
+@app.get('/extoauth', method='POST')
+def do_extoauth():
+    # UNCOMMENT FOR DEBUGGING # print('ENTERING: do_extoauth')
+
+    # Resource owner (enduser) credentials for OAuth 2.0 Resource Owner Password Credentials (ROPC) grant
+    RO_user = request.forms.get('username')
+    RO_password = request.forms.get('password')
+
+    data = {'grant_type': 'password', 'username': RO_user, 'password': RO_password, 'scope': extoauth_scope}
+
+    access_token_response = requests.post(extoauth_token_endpoint, data=data, verify=False, allow_redirects=False, auth=(extoauth_oauth_client_id, extoauth_oauth_client_secret))
+
+    # UNCOMMENT FOR DEBUGGING # print("response headers: ")
+    # UNCOMMENT FOR DEBUGGING # print(access_token_response.headers)
+    # UNCOMMENT FOR DEBUGGING # print("response data: " + access_token_response.text)
+
+    tokens = json.loads(access_token_response.text)
+    # UNCOMMENT FOR DEBUGGING # print("access token: " + tokens['access_token'])
+
+    state.update(tokens)
+
+    refresh = json.loads('{"refresh_token":"null"}')
+    state.update(refresh)
+    return template('token.html', items=state.items(), refresh_token='null')
+
+# used to get the ROPC user's credentials doe External OAuth
+@app.get('/logonform')
+def do_logonform():
+    return template('logonform.html')
+
 # this will run the supplied SQL in the Python connector
 @app.get('/getattr')
 def get_attributes():
@@ -130,8 +187,9 @@ def get_attributes():
     # UNCOMMENT FOR DEBUGGING # print('state right now: {}'.format(state))
 
     cnx = snowflake.connector.connect(
-        account=config['SNOWFLAKE']['account'],
-        authenticator=config['SNOWFLAKE']['authenticator'],
+        account=snowflake_account,
+        authenticator=snowflake_authenticator,
+        role=snowflake_role,
         token=state['access_token']
     )
 
@@ -141,14 +199,14 @@ def get_attributes():
     rowdict = {}
 
     try:
-        cur.execute(config['SNOWFLAKE']['query'])
+        cur.execute(snowflake_query)
 
         for (col1, col2) in cur:
             rowdict[col1] = col2
     finally:
         cur.close()
 
-    return template('attributes.html', items=rowdict.items(), refresh_token=urllib.parse.quote(state['refresh_token']))
+    return template('attributes.html', results=rowdict.items(), items=state.items(), refresh_token=urllib.parse.quote(state['refresh_token']))
 
 # this will run the supplied SQL in the JDBC connector
 @app.get('/getattrjava')
@@ -158,27 +216,35 @@ def get_attrjava():
     rowdict = {}
 
     # create the SQL to pass
-    javaSQL = "\"" + config['SNOWFLAKE']['query'] + "\""
+    # javaSQL = "\"" + snowflake_query + "\""
+    javaSQL = snowflake_query
 
     # create the classpath
-    classpath = config['JAVA']['compiled_classpath'] + ":" + config['JAVA']['snowflake_jdbc_classpath']
+    classpath = java_class + ":" + java_jdbcjar
 
-    result = subprocess.run(['java', '-cp', classpath, 'OAuthJDBCTest', state['access_token'], config['SNOWFLAKE']['accountname'], javaSQL], stdout=subprocess.PIPE)
+    # UNCOMMENT FOR DEBUGGING # print("Classpath " + classpath + ", SQL " + javaSQL)
 
+    result = subprocess.run(['java', '-cp', classpath, 'OAuthJDBCTest', state['access_token'], snowflake_accounturl, javaSQL, snowflake_role], stdout=subprocess.PIPE, universal_newlines=True, shell=False)
+
+    # UNCOMMENT FOR DEBUGGING # print("This is the command result: ")
     # UNCOMMENT FOR DEBUGGING # print(result)
+    # UNCOMMENT FOR DEBUGGING # print("The end of the command.")
 
     results = result.stdout.splitlines()
 
+    # UNCOMMENT FOR DEBUGGING # print("these are the results: ")
     # UNCOMMENT FOR DEBUGGING # print(results)
+    # UNCOMMENT FOR DEBUGGING # print("The end of the resultset.")
 
     for line in results:
         if len(line) != 0:
-            (a, b) = line.decode().split(',')
+            (a, b) = line.split(',')
+            #(a, b) = line.decode().split(',')
             col1 = a.strip()
             col2 = b.strip()
             rowdict[col1] = col2
 
-    return template('attributes.html', items=rowdict.items(), refresh_token=urllib.parse.quote(state['refresh_token']))
+    return template('attributes.html', results=rowdict.items(), items=state.items(), refresh_token=urllib.parse.quote(state['refresh_token']))
 
 # performs a refresh of the access token using the refresch token
 @app.get('/refresh')
@@ -187,6 +253,7 @@ def do_refresh():
     # UNCOMMENT FOR DEBUGGING # print('state right now: {}'.format(state))
     token = refresh_access_token(request.query.get('refresh_token'))
     state.update(token)
+
     # UNCOMMENT FOR DEBUGGING # print('state right now: {}'.format(state))
     return template('token.html', items=state.items(), refresh_token=urllib.parse.quote(state['refresh_token']))
 
@@ -209,7 +276,8 @@ def get_token_code(code):
     data = data.encode('ascii')  # data should be bytes
     # UNCOMMENT FOR DEBUGGING # print('data for token req: {}'.format(data))
     resp_text = post_data(data, prepare_headers(), token_endpoint)
-    print(resp_text)
+
+    # UNCOMMENT FOR DEBUGGING # print(resp_text)
     return json.loads(resp_text)
 
 # helper functions for the code above
@@ -224,7 +292,8 @@ def refresh_access_token(refresh_token):
     })
     data = data.encode('ascii')  # data should be bytes
     resp_text = post_data(data, prepare_headers(), token_endpoint)
-    print(resp_text)
+
+    # UNCOMMENT FOR DEBUGGING # print(resp_text)
     # UNCOMMENT FOR DEBUGGING # print('state right now: {}'.format(state))
     return json.loads(resp_text)
 
@@ -247,5 +316,5 @@ def post_data(data, headers, url):
     return rsp.decode('utf-8')
 
 
-run(app, host='0.0.0.0', port=8088)
+run(app, host='0.0.0.0', port=app_port)
  

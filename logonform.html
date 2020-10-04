@@ -3,12 +3,56 @@
 <head lang="en">
     <meta charset="UTF-8">
     <title></title>
+	<style>
+		.button {
+		  display: inline-block;
+		  padding: 15px 25px;
+		  width: 250px;
+		  font-size: 14px;
+		  cursor: pointer;
+		  text-align: center;
+		  text-decoration: none;
+		  outline: none;
+		  color: #fff;
+		  background-color: #0ABEF5;
+		  border: none;
+		  border-radius: 15px;
+		  box-shadow: 0 9px #999;
+		}
+
+		.button:hover {background-color: #7FC1EA}
+
+		.button:active {
+		  background-color: #1F58C9;
+		  box-shadow: 0 5px #666;
+		  transform: translateY(4px);
+		}
+
+		/* make the table a 100% wide by default */
+		table { table-layout: fixed; width: 100%; }
+		td { word-break:break-all; }
+		span { word-break:break-all; }
+
+		.myDiv {
+		  text-align: center;
+		}
+	</style>
 </head>
 <body>
-<form method="post" action="/logon-creds">
-    User name: <input type="text" name="username"><br/>
-    Password: <input type="password" name="password"><br/>
-    <input type="submit">
-</form>
+<div class="myDiv">
+	<P>
+	<B>Credentials for you External OAuth Authorization Service</B><br/>
+	This form should ONLY be used if you configured External OAuth. With External OAuth, you will be authenticating to a service which will then issue you an OAuth 2.0 Access Token which will grant you a session with Snowflake. These will be credentials for a user from the service (e.g. you AAD, Okta, Ping, or other IdP) which have already been configured with access in Snowflake. All other normal External OAuth ideas apply; including the scope determining the roles allowed. Please see <a href="https://docs.snowflake.com/en/user-guide/oauth-external.html">Snowflake's documentation for detail</a>. 
+	</P>
+
+	<P>
+	<form method="post" action="/extoauth" id="form1">
+	    Username: <input type="text" name="username">   
+	    Password: <input type="password" name="password"><br/>
+	</form>
+	<br/>
+	<button type="submit" form="form1" value="Submit" class="button">Submit Authorization Service Credentials</button>
+	</P>
+</div>
 </body>
 </html> 

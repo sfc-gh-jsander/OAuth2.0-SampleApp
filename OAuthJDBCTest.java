@@ -43,15 +43,15 @@ import java.util.Properties;
 public class OAuthJDBCTest {
   public static void main(String[] args) throws Exception
   {
-    if (args.length != 3)
+    if (args.length != 4)
     {
-      System.out.println("Please run with an OAuth Access Token and account name!");
+      System.out.println("Please run with an OAuth Access Token, Snowflake account name and role!");
       return;
     }
 
 
     // get connection
-    Connection connection = getConnection(args[0], args[1]);
+    Connection connection = getConnection(args[0], args[1], args[3]);
     if (connection == null)
     {
       return;
@@ -59,7 +59,7 @@ public class OAuthJDBCTest {
 
     // use connection to run the statement
     Statement statement = connection.createStatement();
-    ResultSet resultSet = statement.executeQuery("SELECT NAME, TEAM FROM SCIFI_FANTASY.PUBLIC.MARVEL_CHARACTERS");
+    ResultSet resultSet = statement.executeQuery(args[2]);
 
     int rowIdx = 0;
     while (resultSet.next()) {
@@ -76,7 +76,7 @@ public class OAuthJDBCTest {
   /**
    * Gets a connection via the OAuth Authenticator
    */
-  private static Connection getConnection(String oAuthAccessToken, String accountName)
+  private static Connection getConnection(String oAuthAccessToken, String accountName, String role)
       throws SQLException
   {
     try
@@ -91,7 +91,6 @@ public class OAuthJDBCTest {
 
     String connectStr = "jdbc:snowflake://";
     connectStr += accountName;
-    connectStr += ".us-east-1.snowflakecomputing.com";
 
     // build connection properties. Note that username is optional
     // and role can be omitted
@@ -99,6 +98,7 @@ public class OAuthJDBCTest {
     properties.put("account", accountName);
     properties.put("authenticator", "OAUTH");
     properties.put("token", oAuthAccessToken);
+    properties.put("role", role);
     return DriverManager.getConnection(connectStr, properties);
   }
 }
