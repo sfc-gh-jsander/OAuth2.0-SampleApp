@@ -6,6 +6,8 @@ You should read and follow all the steps here: https://docs.snowflake.net/manual
 
 If you do not have either Snowflake or OAuth set up, then this app will not help you. 
 
+Make sure you use a Snowflake user with a default warehouse which is set for auto-resume, and that rights to use that warehouse are specifically granted to the role which your OAuth scope will be invoking when you run the SQL. 
+
 This was built and tested on ubuntu using Python 3.8.2 and AdoptOpenJDK build 11.0.8+10. Support for lower version of either is not assured, and there are modules and other Python 3 dependancies. Review the Python code carefully to ensure compatability with your testbed.
 
 # Steps to Use
