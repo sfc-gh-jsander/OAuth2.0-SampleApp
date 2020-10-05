@@ -49,6 +49,7 @@ app = Bottle()
 
 # begin an instance of the INI reader
 config = configparser.ConfigParser()
+config._interpolation = configparser.ExtendedInterpolation()
 
 # import the coniguration from the ini file in this directory
 # change to a full path if you move the file
