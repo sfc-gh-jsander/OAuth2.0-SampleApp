@@ -159,6 +159,9 @@ def do_extoauth():
     RO_user = request.forms.get('username')
     RO_password = request.forms.get('password')
 
+   # print (RO_user)
+   # print (RO_password)
+
     data = {'grant_type': 'password', 'username': RO_user, 'password': RO_password, 'scope': extoauth_scope}
 
     access_token_response = requests.post(extoauth_token_endpoint, data=data, verify=False, allow_redirects=False, auth=(extoauth_oauth_client_id, extoauth_oauth_client_secret))
@@ -184,14 +187,18 @@ def do_logonform():
 # this will run the supplied SQL in the Python connector
 @app.get('/getattr')
 def get_attributes():
-    # UNCOMMENT FOR DEBUGGING # print('ENTERING: get_attributes')
-    # UNCOMMENT FOR DEBUGGING # print('state right now: {}'.format(state))
+    print('ENTERING: get_attributes')
+    print('state right now: {}'.format(state))
 
     cnx = snowflake.connector.connect(
-        account=snowflake_account,
+        #account=snowflake_account,
+        account="XXXXXXX",
         authenticator=snowflake_authenticator,
         role=snowflake_role,
-        token=state['access_token']
+        token=state['access_token'],
+        warehouse="XXXXXX",
+        database="XXXXX",
+        schema="XXXX"
     )
 
     # Querying data
@@ -204,6 +211,7 @@ def get_attributes():
 
         for (col1, col2) in cur:
             rowdict[col1] = col2
+            print ("These are the results from PYTHON: "+str(rowdict))
     finally:
         cur.close()
 
@@ -212,8 +220,8 @@ def get_attributes():
 # this will run the supplied SQL in the JDBC connector
 @app.get('/getattrjava')
 def get_attrjava():
-    # UNCOMMENT FOR DEBUGGING # print('ENTERING: get_attrjava')
-    # UNCOMMENT FOR DEBUGGING # print('state right now: {}'.format(state))
+    print('ENTERING: get_attrjava')
+    print('state right now: {}'.format(state))
     rowdict = {}
 
     # create the SQL to pass
@@ -223,19 +231,19 @@ def get_attrjava():
     # create the classpath
     classpath = java_class + ":" + java_jdbcjar
 
-    # UNCOMMENT FOR DEBUGGING # print("Classpath " + classpath + ", SQL " + javaSQL)
+    print("Classpath " + classpath + ", SQL " + javaSQL)
 
     result = subprocess.run(['java', '-cp', classpath, 'OAuthJDBCTest', state['access_token'], snowflake_accounturl, javaSQL, snowflake_role], stdout=subprocess.PIPE, universal_newlines=True, shell=False)
 
-    # UNCOMMENT FOR DEBUGGING # print("This is the command result: ")
-    # UNCOMMENT FOR DEBUGGING # print(result)
-    # UNCOMMENT FOR DEBUGGING # print("The end of the command.")
+    print("This is the command result: ")
+    print(result)
+    print("The end of the command.")
 
     results = result.stdout.splitlines()
 
-    # UNCOMMENT FOR DEBUGGING # print("these are the results: ")
-    # UNCOMMENT FOR DEBUGGING # print(results)
-    # UNCOMMENT FOR DEBUGGING # print("The end of the resultset.")
+    print("these are the results from JAVA: ")
+    print(results)
+    print("The end of the resultset.")
 
     for line in results:
         if len(line) != 0:

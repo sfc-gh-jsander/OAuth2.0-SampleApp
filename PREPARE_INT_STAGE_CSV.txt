@@ -1,0 +1,9 @@
+create or replace stage test_named_stage
+  encryption = (type = 'SNOWFLAKE_SSE'),
+  file_format = (type = 'CSV' field_delimiter = ',' skip_header = 1);
+    
+  ls @test_named_stage;
+
+  
+  
+  select build_stage_file_url(@test_named_stage, 'test.csv');

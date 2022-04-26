@@ -95,10 +95,13 @@ public class OAuthJDBCTest {
     // build connection properties. Note that username is optional
     // and role can be omitted
     Properties properties = new Properties();
-    properties.put("account", accountName);
+    //properties.put("account", accountName);
     properties.put("authenticator", "OAUTH");
     properties.put("token", oAuthAccessToken);
     properties.put("role", role);
+    properties.put("warehouse", "XXXXXX");
+    properties.put("db", "XXXXXX");
+    properties.put("schema", "XXXXXX");
     return DriverManager.getConnection(connectStr, properties);
   }
 }
